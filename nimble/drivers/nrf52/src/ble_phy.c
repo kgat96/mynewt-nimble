@@ -44,6 +44,11 @@
 #endif
 #endif
 
+
+int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
+#define rtt_printf(fmt, ...)       SEGGER_RTT_printf(0, (fmt), ##__VA_ARGS__)
+
+
 /*
  * NOTE: This code uses a couple of PPI channels so care should be taken when
  *       using PPI somewhere else.
@@ -1244,6 +1249,9 @@ ble_phy_isr(void)
     /* Read irq register to determine which interrupts are enabled */
     irq_en = NRF_RADIO->INTENCLR;
 
+    rtt_printf("ble_phy_isr COUNTER %d %x %x %x %x\n", NRF_RTC0->CC[2], irq_en,
+                    NRF_RADIO->EVENTS_ADDRESS,NRF_RADIO->EVENTS_DISABLED,NRF_RADIO->EVENTS_END);
+
     /*
      * NOTE: order of checking is important! Possible, if things get delayed,
      * we have both an ADDRESS and DISABLED interrupt in rx state. If we get
@@ -1262,6 +1270,7 @@ ble_phy_isr(void)
          * regular radio disabled event below. In other case radio was disabled
          * on purpose and there's nothing more to handle so we can clear mask.
          */
+        rtt_printf("ble_phy_rx_start_isr\n");
         if (ble_phy_rx_start_isr()) {
             irq_en &= ~RADIO_INTENCLR_DISABLED_Msk;
         }
@@ -1275,12 +1284,14 @@ ble_phy_isr(void)
         } else if (g_ble_phy_data.phy_state == BLE_PHY_STATE_IDLE) {
             assert(0);
         } else {
+            rtt_printf("ble_phy_tx_end_isr\n");
             ble_phy_tx_end_isr();
         }
     }
 
     /* Receive packet end (we dont enable this for transmit) */
     if ((irq_en & RADIO_INTENCLR_END_Msk) && NRF_RADIO->EVENTS_END) {
+        rtt_printf("ble_phy_rx_end_isr\n");
         ble_phy_rx_end_isr();
     }
 

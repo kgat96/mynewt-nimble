@@ -42,6 +42,10 @@
 #include "controller/ble_ll_rfmgmt.h"
 #include "ble_ll_conn_priv.h"
 
+int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
+#define rtt_printf(fmt, ...)       SEGGER_RTT_printf(0, (fmt), ##__VA_ARGS__)
+
+
 /* XXX: TODO
  * 1) Need to look at advertising and scan request PDUs. Do I allocate these
  * once? Do I use a different pool for smaller ones? Do I statically declare
@@ -1086,6 +1090,9 @@ ble_ll_adv_tx_start_cb(struct ble_ll_sched_item *sch)
     uint8_t end_trans;
     uint32_t txstart;
     struct ble_ll_adv_sm *advsm;
+
+    rtt_printf("%s ", __func__);
+    rtt_printf("CC[2] %d COUNTER %d %d\n", NRF_RTC0->CC[2], NRF_RTC0->COUNTER, os_cputime_get32());
 
     /* Get the state machine for the event */
     advsm = (struct ble_ll_adv_sm *)sch->cb_arg;
@@ -2738,6 +2745,9 @@ ble_ll_adv_sm_start(struct ble_ll_adv_sm *advsm)
     advsm->adv_pdu_start_time = os_cputime_get32() +
                                 os_cputime_usecs_to_ticks(start_delay_us);
 
+    rtt_printf("adv_pdu_start_time +%d/%d\n", 
+                os_cputime_usecs_to_ticks(start_delay_us), os_cputime_get32());
+
     ble_ll_adv_set_sched(advsm);
 
     delta = (int32_t)(advsm->adv_sch.start_time - earliest_start_time);
@@ -2746,6 +2756,7 @@ ble_ll_adv_sm_start(struct ble_ll_adv_sm *advsm)
         advsm->adv_sch.end_time -= delta;
     }
 
+    rtt_printf("adv sch %d -> %d\n", advsm->adv_sch.start_time, advsm->adv_sch.end_time);
     /* This does actual scheduling */
     ble_ll_sched_adv_new(&advsm->adv_sch, ble_ll_adv_scheduled, NULL);
 
@@ -2835,6 +2846,7 @@ ble_ll_adv_set_enable(uint8_t instance, uint8_t enable, int duration,
         /* If already enabled, do nothing */
         if (!advsm->adv_enabled) {
             /* Start the advertising state machine */
+            //rtt_printf("ble_ll_adv_sm_start\n");
             rc = ble_ll_adv_sm_start(advsm);
         }
     } else if (enable == 0) {

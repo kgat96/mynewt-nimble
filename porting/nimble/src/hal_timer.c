@@ -29,6 +29,10 @@
 /* IRQ prototype */
 typedef void (*hal_timer_irq_handler_t)(void);
 
+int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
+#define rtt_printf(fmt, ...)       SEGGER_RTT_printf(0, (fmt), ##__VA_ARGS__)
+
+
 /* User CC 2 for reading counter, CC 3 for timer isr */
 #define NRF_TIMER_CC_READ       (2)
 #define NRF_TIMER_CC_INT        (3)
@@ -190,7 +194,20 @@ nrf_timer_set_ocmp(struct nrf52_hal_timer *bsptimer, uint32_t expiry)
                 /* CC too far ahead. Just make sure we set compare far ahead */
                 rtctimer->CC[NRF_RTC_TIMER_CC_INT] = cntr + (1UL << 23);
             }
+
+            rtt_printf("set CC[%d] %d <- %d\n", NRF_RTC_TIMER_CC_INT, rtctimer->CC[NRF_RTC_TIMER_CC_INT], rtctimer->COUNTER);
+
             rtctimer->INTENSET = NRF_TIMER_INT_MASK(NRF_RTC_TIMER_CC_INT);
+
+            if(0) {
+                static int tt1 = 0;
+                tt1++;
+
+                if (tt1 == 2) {
+                    __asm__ volatile("nop");
+                }
+
+            }
         }
     } else {
         hwtimer = bsptimer->tmr_reg;
